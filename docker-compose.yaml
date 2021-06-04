@@ -1,0 +1,60 @@
+version: '3'
+
+services:
+  nginx_player:
+    image: nginx:stable-alpine
+    container_name: nginx_player
+    ports:
+      - "95:80"
+    volumes:
+      - ./src:/var/www
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php_player
+      - mysql_player
+    networks:
+      - laravel
+
+  mysql_player:
+    image: mysql:5.7.22
+    container_name: mysql_player
+    restart: unless-stopped
+    tty: true
+    volumes:
+     - ./DB:/var/lib/mysql
+    ports:
+      - "3391:3306"
+    environment:
+      MYSQL_DATABASE: video_player
+      MYSQL_USER: video_player
+      MYSQL_PASSWORD: ajadam
+      MYSQL_ROOT_PASSWORD: ajadam
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    networks:
+      - laravel
+
+  php_player:
+    container_name: php_player
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    tty: true
+    environment:
+      XDEBUG_CONFIG: "remote_host=198.168.220.1"
+    working_dir: /var/www
+    volumes:
+      - ./src:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    links:
+      - mysql_player
+    networks:
+      - laravel
+
+networks:
+  laravel:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 198.168.222.0/28
